@@ -98,10 +98,14 @@ class DGUFS(BaseEstimator, TransformerMixin):
         while i <= max_iter:
 
             # Update Z.
-            U = X - Y - ((1 - self.beta) * Y.dot(H).dot(L).dot(H) - Lamda1) /self. mu
-            Z = X - self.solve_l20(U, (ncols - self.num_features))
+            U1 = X - Y - ((1 - self.beta) * Y.dot(H).dot(L).dot(H) - Lamda1) / self. mu
+            Z = X - self.solve_l20(U1, (ncols - self.num_features))
 
-            print(Z)
+            # Update Y.
+            U1 = Z + ((1 - self.beta) * Z.dot(H).dot(L).dot(H) + Lamda1) / self.mu
+            Y = self.solve_l20(U1, self.num_features)
+
+            print(Y)
 
             i = i + 1
 
