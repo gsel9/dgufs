@@ -1,8 +1,7 @@
+# -*- coding: utf-8 -*_
 #
-#
-#
-#
-
+# utils.py
+# 
 
 """
 These implementations are based on the MATLAB code:
@@ -15,6 +14,13 @@ from scipy.optimize import linear_sum_assignment
 from sklearn.metrics import normalized_mutual_info_score
 # For euclidean distance matrix. See also: https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
 from sklearn.metrics.pairwise import euclidean_distances
+
+import numpy as np
+
+from scipy import linalg
+from scipy.spatial import distance
+
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
 def similarity_matrix(X):

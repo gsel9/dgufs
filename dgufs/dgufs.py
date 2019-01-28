@@ -1,5 +1,10 @@
-# From: Dependence Guided Unsupervised Feature Selection, Guo & Zhu.
-
+# -*- coding: utf-8 -*_
+#
+# dgufs.py
+#
+# MATLAB basis for implementation:
+# https://github.com/eeGuoJun/AAAI2018_DGUFS/blob/master/JunGuo_AAAI_2018_DGUFS_code/
+#
 import numpy as np
 
 import utils
@@ -10,13 +15,12 @@ from scipy.spatial import distance
 from sklearn.base import BaseEstimator, TransformerMixin
 
 """
-The implementation is based on the MATLAB code:
-https://github.com/eeGuoJun/AAAI2018_DGUFS/blob/master/JunGuo_AAAI_2018_DGUFS_code/files/speedUp.m
+The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
+Wenwu Zhu (2018).
 
 """
 
 
-# Checkout: https://github.com/eeGuoJun/AAAI2018_DGUFS/tree/master/JunGuo_AAAI_2018_DGUFS_code
 class DGUFS(BaseEstimator, TransformerMixin):
     """The Dependence Guided Unsupervised Feature Selection (DGUFS) algorithm
     developed by Jun Guo and Wenwu Zhu.
@@ -50,13 +54,33 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self.max_mu = max_mu
         self.rho = rho
 
-        self._sel_features = None
-        self._cluster_labels = None
+        # NOTE: Attributes set with instance.
+        self.S = None
+        self.H = None
+        self.Y = None
+        self.Z = None
+        self.M = None
+        self.L = None
+        self.Lamda1 = None
+        self.Lamda2 = None
 
-    def fit(self, X, y=None, **kwargs):
+    def _construct_matrices(self, nrows, ncols):
+        # Setup:
+
+        self.Y = np.zeros((ncols, nrows), dtype=float)
+        self.Z = np.zeros((ncols, nrows), dtype=float)
+
+        self.M = np.zeros((nrows, nrows), dtype=float)
+        self.L = np.zeros((nrows, nrows), dtype=float)
+
+        self.Lamda1 = np.zeros((ncols, nrows), dtype=float)
+        self.Lamda2 = np.zeros((nrows, nrows), dtype=float)
+
+        return self
+
+    def _check_X(self, X):
 
         nrows, ncols = np.shape(X)
-
         if self.num_features > ncols:
             raise ValueError('Number of features to select exceeds the number '
                              'of columns in X ({})'.format(ncols))
@@ -64,50 +88,37 @@ class DGUFS(BaseEstimator, TransformerMixin):
             raise RuntimeError('Feature selection requires more than two '
                                'samples')
 
-        # From nrows x ncols to ncols x nrows.
-        X = np.transpose(X)
+        # NB: From nrows x ncols to ncols x nrows as algorithm given in the
+        # paper.
+        X_trans = np.transpose(X)
 
-        S = self.similarity_matrix(X)
+        return X_trans, nrows, ncols
 
-        H = np.eye(nrows) - np.ones((nrows, 1)) * (np.ones((1, nrows)) / nrows)
-        H = H / (nrows - 1)
+    def fit(self, X, y=None, **kwargs):
 
-        # Setup:
-        Y = np.zeros((ncols, nrows), dtype=float)
-        Z = np.zeros((ncols, nrows), dtype=float)
+        # NOTE: Returns transposed of X.
+        X, nrows, ncols = self._check_X(X)
 
-        M = np.zeros((nrows, nrows), dtype=float)
-        L = np.zeros((nrows, nrows), dtype=float)
+        self._construct_matrices(nrows, ncols)
 
-        Lamda1 = np.zeros((ncols, nrows), dtype=float)
-        Lamda2 = np.zeros((nrows, nrows), dtype=float)
+        self.S = utils.similarity_matrix(X)
+
+        scaled = (np.ones((1, nrows)) / nrows)
+        self.H = np.eye(nrows) - np.ones((nrows, 1)) * scaled
+        self.H = self.H / (nrows - 1)
 
         i = 1
-        while i <= max_iter:
+        while i <= self.max_iter:
 
-            # Update Z.
-            U1 = X - Y - ((1 - self.beta) * Y.dot(H).dot(L).dot(H) - Lamda1) / self. mu
-            Z = X - self.solve_l20(U1, (ncols - self.num_features))
-
-            # Update Y.
-            U1 = Z + ((1 - self.beta) * Z.dot(H).dot(L).dot(H) + Lamda1) / self.mu
-            Y = self.solve_l20(U1, self.num_features)
-
-            # Update L.
-            speed_up = self.speed_up(H.dot(np.transpose(Y)).dot(Z).dot(H))
-            U2 = ((1 - self.beta) * speed_up + self.beta * S - Lamda2) / self.mu + M
-            L = self.solve_rank_lagrange(self.speed_up(U2), 2 * self.alpha / self.mu)
-
-            # Update M.
-            M = L + Lamda2 / self.mu
-            gamma = 5e-3
-            M = self.solve_l0_binary(M, 2 * gamma / self.mu)
-            M = M - np.diag(np.diag(M)) + np.eye(nrows)
+            # Alternate optimization.
+            self._update_Z(X, ncols)
+            self._update_Y()
+            self._update_L()
+            self._update_M(nrows)
 
             # Check if stop criterion is satisfied.
-            leq1 = Z - Y
-            leq2 = L - M
-            # Infinite norm.
+            leq1 = self.Z - self.Y
+            leq2 = self.L - self.M
             stopC1 = np.max(np.abs(leq1))
             stopC2 = np.max(np.abs(leq2))
 
@@ -115,10 +126,9 @@ class DGUFS(BaseEstimator, TransformerMixin):
                 i = self.max_iter
             else:
                 # Update Lagrange multipliers.
-                Lamda1 = Lamda1 + self.mu * leq1
-                Lamda2 = Lamda2 + self.mu * leq2
+                self.Lamda1 = self.Lamda1 + self.mu * leq1
+                self.Lamda2 = self.Lamda2 + self.mu * leq2
                 self.mu = min(self.max_mu, self.mu * self.rho);
-
                 # Update counter.
                 i = i + 1
 
@@ -135,79 +145,43 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # returns Y,L,V,Label
         # Y are the selected features. Each column is a sample (return transposed).
 
-        return Y.T
+        return self
 
-    def similarity_matrix(X):
+    def _update_Z(self, X, ncols):
 
-        S = distance.squareform(distance.pdist(np.transpose(X)))
+        YHLH = self.Y.dot(self.H).dot(self.L).dot(self.H)
+        U = X - self.Y - ((1 - self.beta) * YHLH - self.Lamda1) / self. mu
+        self.Z = X - utils.solve_l20(U, (ncols - self.num_features))
 
-        return -S / np.max(S)
+        return self
 
-    def solve_l20(Q, nfeats):
+    def _update_Y(self):
 
-        # b(i) is the (l2-norm)^2 of the i-th row of Q.
-        b = np.sum(Q ** 2, axis=1)[:, np.newaxis]
-        idx = np.argsort(b[:, 0])[::-1]
+        ZLH = self.Z.dot(self.H).dot(self.L).dot(self.H)
+        U = self.Z + ((1 - self.beta) * ZLH + self.Lamda1) / self.mu
+        self.Y = utils.solve_l20(U, self.num_features)
 
-        P = np.zeros(np.shape(Q), dtype=float)
-        P[idx[:nfeats], :] = Q[idx[:nfeats], :]
+        return self
 
-        return P
+    def _update_L(self):
 
-    def speed_up(C):
-        """Refer to Simultaneous Clustering and Model Selection (SCAMS),
-        CVPR2014.
+        speed_up = utils.speed_up(
+            self.H.dot(np.transpose(self.Y)).dot(self.Z).dot(self.H)
+        )
+        U = ((1 - self.beta) * speed_up + self.beta * self.S - self.Lamda2)
+        # Solve
+        L = utils.solve_rank_lagrange(
+            utils.speed_up(U / self.mu + self.M), 2 * self.alpha / self.mu
+        )
+        return self
 
-        """
-        diagmask = np.eye(np.shape(C)[0], dtype=bool)
-        # Main diagonal = 0.
-        C[diagmask] = 0
+    def _update_M(self, nrows, gamma=5e-3):
 
-        # If C is (N x N), then tmp is (N*N x 1).
-        tmp = np.reshape(C, (np.size(C), 1))
-        # Remove the main diagonal elements of C in tmp. Then tmp has a
-        # length of N * (N - 1).
-        tmp = np.delete(tmp, np.where(diagmask.ravel()))
-        # Scale to [0, 1] range.
-        tmp = (tmp - np.min(tmp)) / (np.max(tmp) - np.min(tmp))
+        M = self.L + self.Lamda2 / self.mu
+        M = utils.solve_l0_binary(M, 2 * gamma / self.mu)
+        self.M = M - np.diag(np.diag(M)) + np.eye(nrows)
 
-        affmaxo = C
-        # affmaxo(~diagmask) is a column vector.
-        affmaxo[np.logical_not(diagmask)] = tmp
-        C_new = affmaxo
-
-        return C_new
-
-    def solve_rank_lagrange(A, eta):
-
-        # Guarantee symmetry.
-        A = 0.5 * (A + np.transpose(A))
-        tempD, tempV = linalg.eig(A)
-        # Discard the imaginary part.
-        tempV = np.real(tempV)
-        tmpD = np.real(tempD)
-
-        tempD = np.real(np.diag(tempD))
-        # eta * rank(P)
-        tmpD[tmpD <= np.sqrt(eta)] = 0
-        tempD = np.diag(tmpD)
-
-        P = tempV.dot(tempD).dot(np.transpose(tempV))
-
-        return P
-
-    def solve_l0_binary(Q, gamma):
-
-        P = np.copy(Q)
-        # Each P_ij is in {0, 1}
-        if gamma > 1:
-            P[Q > 0.5 * (gamma + 1)] = 1
-            P[Q <= 0.5 * (gamma + 1)] = 0
-        else:
-            P[Q > 1] = 1
-            P[Q < np.sqrt(gamma)] = 0
-
-        return P
+        return self
 
     def transform(self, X, y=None, **kwargs):
         pass
