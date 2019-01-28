@@ -5,12 +5,6 @@
 # This module is part of dgufs
 #
 
-import numpy as np
-
-from scipy import linalg
-from scipy.spatial import distance
-from sklearn.base import BaseEstimator, TransformerMixin
-
 """
 The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
 Wenwu Zhu (2018).
@@ -21,18 +15,10 @@ __author__ = 'Severin E. R. Langberg'
 __email__ = 'langberg91@gmail.no'
 
 
-# For Hungarian algorithm. See also: https://pypi.org/project/munkres/
-from scipy.optimize import linear_sum_assignment
-from sklearn.metrics import normalized_mutual_info_score
-# For euclidean distance matrix. See also: https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
-from sklearn.metrics.pairwise import euclidean_distances
-
 import numpy as np
 
 from scipy import linalg
 from scipy.spatial import distance
-
-from sklearn.base import BaseEstimator, TransformerMixin
 
 
 def similarity_matrix(X):
@@ -41,13 +27,13 @@ def similarity_matrix(X):
     S = distance.squareform(distance.pdist(X))
     return -S / np.max(S)
 
-# Implemented experimental version.
-def centering_matrix(nrows, ncols):
+
+def centering_matrix(nrows):
     """"""
 
     scaled = (np.ones((1, nrows)) / nrows)
     H = np.eye(nrows) - np.ones((nrows, 1)) * scaled
-
+    # Experimental version where H := H / (n - 1).
     return H / (nrows - 1)
 
 def solve_l20(Q, nfeats):

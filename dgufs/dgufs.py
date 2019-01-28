@@ -5,18 +5,6 @@
 # This module is part of dgufs
 #
 
-import numpy as np
-import pandas as pd
-
-import utils
-#from dgufs import utils
-
-from scipy import linalg
-from scipy.sparse.linalg import eigs
-from scipy.spatial import distance
-from sklearn.base import BaseEstimator, TransformerMixin
-
-
 """
 The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
 Wenwu Zhu (2018).
@@ -25,6 +13,15 @@ Wenwu Zhu (2018).
 
 __author__ = 'Severin E. R. Langberg'
 __email__ = 'langberg91@gmail.no'
+
+
+import numpy as np
+import pandas as pd
+
+from dgufs import utils
+
+from scipy import linalg
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class DGUFS(BaseEstimator, TransformerMixin):
@@ -77,7 +74,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self.Lamda1 = None
         self.Lamda2 = None
 
-    def _construct_matrices(self, nrows, ncols):
+    def _setup_matrices(self, nrows, ncols):
         # Setup.
         self.Y = np.zeros((ncols, nrows), dtype=float)
         self.Z = np.zeros((ncols, nrows), dtype=float)
@@ -140,23 +137,23 @@ class DGUFS(BaseEstimator, TransformerMixin):
                 (n samples x n features).
 
         """
-
-        # NOTE: Returns transposed of X.
         X_trans, nrows, ncols = self._check_X(X)
 
-        self._construct_matrices(nrows, ncols)
-
         self.S = utils.similarity_matrix(X)
-        # Implemented experimental version where H := H / (n - 1).
-        self.H = utils.centering_matrix(nrows, ncols)
+        # Experimental version where H := H / (n - 1).
+        self.H = utils.centering_matrix(nrows)
+
+        self._setup_matrices(nrows, ncols)
 
         i = 1
         while i <= self.max_iter:
+
             # Alternate optimization of matrices.
             self._update_Z(X_trans, ncols)
             self._update_Y()
             self._update_L()
             self._update_M(nrows)
+
             # Check if stop criterion is satisfied.
             leq1 = self.Z - self.Y
             leq2 = self.L - self.M
@@ -240,20 +237,11 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
 
 if __name__ == '__main__':
-
-    #import pandas as pd
-    #X = pd.read_csv('./../../ms/data_source/to_analysis/sqroot_concat.csv', index_col=0)
-
-    #X = np.array(
-    #    [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
-    #).T
-
     from sklearn.datasets import load_iris
+    from sklearn.preprocessing import StandardScaler
 
     iris = load_iris(return_X_y=False)
-
     X, y = iris.data, iris.target
 
     dgufs = DGUFS(num_features=2)
     dgufs.fit(X)
-    print(np.sum(dgufs.Y, axis=1))
