@@ -5,13 +5,17 @@
 # This module is part of dgufs
 #
 
-import utils
-
 import numpy as np
+import pandas as pd
+
+import utils
+#from dgufs import utils
 
 from scipy import linalg
+from scipy.sparse.linalg import eigs
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator, TransformerMixin
+
 
 """
 The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
@@ -47,7 +51,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         alpha=0.5,
         beta=0.9,
         tol=5e-7,
-        max_iter=1, #1e2,
+        max_iter=1e2,
         mu=1e-6,
         max_mu=1e10,
         rho=1.1
@@ -109,24 +113,24 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # column sums != 0.
         selected_cols = np.squeeze(np.where(np.sum(self.Y.T, axis=0) != 0))
         # Sanity check.
-        assert len(selected_cols) == self.num_features
+        assert len(selected_cols) <= self.num_features
 
         return selected_cols
 
     @property
-    def labels(self):
+    def cluster_labels(self):
 
-        # Obtain labels.
-        #eigD, eigV = linalg.eigs(np.max(L, np.transpose(L)), self.num_clusters, 'la')
-        #V = eigV * np.sqrt(eigD)
+        # NOTE: Alternatively use scipy.sparse.linalg.eigs with
+        # k=self.num_clusters.
+        eigD, eigV = linalg.eig(np.maximum(self.L, np.transpose(self.L)))
+        # Discard imaginary parts and truncate assuming comps are sorted.
+        eigD = np.real(np.diag(eigD)[:self.num_clusters, :self.num_clusters])
+        eigV = np.real(eigV[:, :self.num_clusters])
 
-        # Sanity check.
-        #assert (nrows, self.num_clusters) == np.shape(V)
+        V = np.dot(eigV, np.sqrt(eigD))
+        label = np.argmax(V, axis=0)
 
-        #[~, Label] = max(abs(V),[],2);
-        #V = V'; % final: [nClass,nSmp]=size(V)
-
-        pass
+        return np.transpose(V)
 
     def fit(self, X, **kwargs):
         """Select features from X.
@@ -138,18 +142,18 @@ class DGUFS(BaseEstimator, TransformerMixin):
         """
 
         # NOTE: Returns transposed of X.
-        X, nrows, ncols = self._check_X(X)
+        X_trans, nrows, ncols = self._check_X(X)
 
         self._construct_matrices(nrows, ncols)
 
         self.S = utils.similarity_matrix(X)
-        # Implemented experimental version.
+        # Implemented experimental version where H := H / (n - 1).
         self.H = utils.centering_matrix(nrows, ncols)
 
         i = 1
         while i <= self.max_iter:
             # Alternate optimization of matrices.
-            self._update_Z(X, ncols)
+            self._update_Z(X_trans, ncols)
             self._update_Y()
             self._update_L()
             self._update_M(nrows)
@@ -173,15 +177,15 @@ class DGUFS(BaseEstimator, TransformerMixin):
     def _update_Z(self, X, ncols):
         # Updates the Z matrix.
         YHLH = self.Y.dot(self.H).dot(self.L).dot(self.H)
-        U = X - self.Y - ((1 - self.beta) * YHLH - self.Lamda1) / self. mu
+        U = X - self.Y - (((1 - self.beta) * YHLH - self.Lamda1) / self. mu)
         self.Z = X - utils.solve_l20(U, (ncols - self.num_features))
 
         return self
 
     def _update_Y(self):
         # Updates the Y matrix.
-        ZLH = self.Z.dot(self.H).dot(self.L).dot(self.H)
-        U = self.Z + ((1 - self.beta) * ZLH + self.Lamda1) / self.mu
+        ZHLH = self.Z.dot(self.H).dot(self.L).dot(self.H)
+        U = self.Z + (((1 - self.beta) * ZHLH + self.Lamda1) / self.mu)
         self.Y = utils.solve_l20(U, self.num_features)
 
         return self
@@ -202,6 +206,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # Updates the M matrix.
         M = self.L + self.Lamda2 / self.mu
         M = utils.solve_l0_binary(M, 2 * gamma / self.mu)
+
         self.M = M - np.diag(np.diag(M)) + np.eye(nrows)
 
         return self
@@ -236,11 +241,19 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
 if __name__ == '__main__':
 
-    import pandas as pd
-    X = pd.read_csv('./../../ms/data_source/to_analysis/sqroot_concat.csv', index_col=0)
+    #import pandas as pd
+    #X = pd.read_csv('./../../ms/data_source/to_analysis/sqroot_concat.csv', index_col=0)
 
-    dgufs = DGUFS()
-    dgufs.fit(X.values)
-    #dgufs.labels
+    #X = np.array(
+    #    [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
+    #).T
 
-    print(dgufs.transform(X.values).shape)
+    from sklearn.datasets import load_iris
+
+    iris = load_iris(return_X_y=False)
+
+    X, y = iris.data, iris.target
+
+    dgufs = DGUFS(num_features=2)
+    dgufs.fit(X)
+    print(np.sum(dgufs.Y, axis=1))
