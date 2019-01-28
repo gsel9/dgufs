@@ -102,10 +102,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self._construct_matrices(nrows, ncols)
 
         self.S = utils.similarity_matrix(X)
-
-        scaled = (np.ones((1, nrows)) / nrows)
-        self.H = np.eye(nrows) - np.ones((nrows, 1)) * scaled
-        self.H = self.H / (nrows - 1)
+        # Implemented experimental version.
+        self.H = utils.centering_matrix(nrows, ncols)
 
         i = 1
         while i <= self.max_iter:
@@ -199,6 +197,5 @@ if __name__ == '__main__':
 
     dgufs = DGUFS()
     dgufs.fit(X.values)
-    #df_Y = pd.DataFrame(Y, columns=X.columns, index=X.index)
-    #print(df_Y)
+    #df_Y = pd.DataFrame(dgufs.Y.T, columns=X.columns, index=X.index)
     #print(df_Y.columns[df_Y.sum() != 0])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*_
 #
 # utils.py
-# 
+#
 
 """
 These implementations are based on the MATLAB code:
@@ -24,10 +24,20 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 
 def similarity_matrix(X):
+    """"""
 
     S = distance.squareform(distance.pdist(np.transpose(X)))
 
     return -S / np.max(S)
+
+# Implemented experimental version.
+def centering_matrix(nrows, ncols):
+    """"""
+
+    scaled = (np.ones((1, nrows)) / nrows)
+    H = np.eye(nrows) - np.ones((nrows, 1)) * scaled
+
+    return H / (nrows - 1)
 
 def solve_l20(Q, nfeats):
 
@@ -66,6 +76,7 @@ def speed_up(C):
 
 
 def solve_rank_lagrange(A, eta):
+    """"""
 
     # Guarantee symmetry.
     A = 0.5 * (A + np.transpose(A))
@@ -85,6 +96,7 @@ def solve_rank_lagrange(A, eta):
 
 
 def solve_l0_binary(Q, gamma):
+    """"""
 
     P = np.copy(Q)
     # Each P_ij is in {0, 1}
