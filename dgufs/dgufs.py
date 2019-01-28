@@ -103,7 +103,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return X_trans, nrows, ncols
 
     @property
-    def indicators(self):
+    def support(self):
         """Returns the column indicators of selected features."""
 
         # Select features based on where the transformed feature matrix has
@@ -224,12 +224,12 @@ class DGUFS(BaseEstimator, TransformerMixin):
         if isinstance(X, pd.DataFrame):
             data = X.values
             output = pd.DataFrame(
-                data[:, self.indicators],
-                columns=X.columns[self.indicators],
+                data[:, self.support],
+                columns=X.columns[self.support],
                 index=X.index
             )
         elif isinstance(X, np.ndarray):
-            output = X[:, self.indicators]
+            output = X[:, self.support]
         else:
             raise TypeError('Cannot transform data of type {}'.format(type(X)))
 
