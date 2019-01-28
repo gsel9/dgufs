@@ -94,7 +94,42 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         return X_trans, nrows, ncols
 
-    def fit(self, X, y=None, **kwargs):
+    @property
+    def indicators(self):
+        """Returns the column indicators of selected features."""
+
+        # Select features based on where the transformed feature matrix has
+        # column sums dofferent from zero.
+        selected_cols = np.squeeze(np.where(np.sum(self.Y.T, axis=0) != 0))
+
+        # Sanity check.
+        assert len(selected_cols) == self.num_features
+
+        return selected_cols
+
+    @property
+    def labels(self):
+
+        # Obtain labels.
+        #eigD, eigV = linalg.eigs(np.max(L, np.transpose(L)), self.num_clusters, 'la')
+        #V = eigV * np.sqrt(eigD)
+
+        # Sanity check.
+        #assert (nrows, self.num_clusters) == np.shape(V)
+
+        #[~, Label] = max(abs(V),[],2);
+        #V = V'; % final: [nClass,nSmp]=size(V)
+
+        pass
+
+    def fit(self, X, **kwargs):
+        """Select features from X.
+
+        Args:
+            X (array-like): The feature matrix with shape
+                (n samples x n features).
+
+        """
 
         # NOTE: Returns transposed of X.
         X, nrows, ncols = self._check_X(X)
@@ -107,19 +142,16 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         i = 1
         while i <= self.max_iter:
-
-            # Alternate optimization.
+            # Alternate optimization of matrices.
             self._update_Z(X, ncols)
             self._update_Y()
             self._update_L()
             self._update_M(nrows)
-
             # Check if stop criterion is satisfied.
             leq1 = self.Z - self.Y
             leq2 = self.L - self.M
             stopC1 = np.max(np.abs(leq1))
             stopC2 = np.max(np.abs(leq2))
-
             if (stopC1 < self.tol) and (stopC2 < self.tol):
                 i = self.max_iter
             else:
@@ -130,23 +162,10 @@ class DGUFS(BaseEstimator, TransformerMixin):
                 # Update counter.
                 i = i + 1
 
-        # Obtain labels.
-        #eigD, eigV = linalg.eigs(np.max(L, np.transpose(L)), self.num_clusters, 'la')
-        #V = eigV * np.sqrt(eigD)
-
-        # Sanity check.
-        #assert (nrows, self.num_clusters) == np.shape(V)
-
-        #[~, Label] = max(abs(V),[],2);
-        #V = V'; % final: [nClass,nSmp]=size(V)
-
-        # returns Y,L,V,Label
-        # Y are the selected features. Each column is a sample (return transposed).
-
         return self
 
     def _update_Z(self, X, ncols):
-
+        # Updates the Z matrix.
         YHLH = self.Y.dot(self.H).dot(self.L).dot(self.H)
         U = X - self.Y - ((1 - self.beta) * YHLH - self.Lamda1) / self. mu
         self.Z = X - utils.solve_l20(U, (ncols - self.num_features))
@@ -154,7 +173,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def _update_Y(self):
-
+        # Updates the Y matrix.
         ZLH = self.Z.dot(self.H).dot(self.L).dot(self.H)
         U = self.Z + ((1 - self.beta) * ZLH + self.Lamda1) / self.mu
         self.Y = utils.solve_l20(U, self.num_features)
@@ -162,7 +181,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def _update_L(self):
-
+        # Updates the L matrix.
         speed_up = utils.speed_up(
             self.H.dot(np.transpose(self.Y)).dot(self.Z).dot(self.H)
         )
@@ -174,28 +193,48 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def _update_M(self, nrows, gamma=5e-3):
-
+        # Updates the M matrix.
         M = self.L + self.Lamda2 / self.mu
         M = utils.solve_l0_binary(M, 2 * gamma / self.mu)
         self.M = M - np.diag(np.diag(M)) + np.eye(nrows)
 
         return self
 
-    def transform(self, X, y=None, **kwargs):
-        pass
+    def transform(self, X, **kwargs):
+        """Retain selected features from X.
 
+        Args:
+            X (array-like): The feature matrix with shape
+                (n samples x n features).
+
+        Returns:
+            (array-like): The feature matrix containing only the selected
+                features.
+
+        """
+
+        if isinstance(X, pd.DataFrame):
+            data = X.values
+            output = pd.DataFrame(
+                data[:, self.indicators],
+                columns=X.columns[self.indicators],
+                index=X.index
+            )
+        elif isinstance(X, np.ndarray):
+            output = X[:, self.indicators]
+        else:
+            raise TypeError('Cannot transform data of type {}'.format(type(X)))
+
+        return output
 
 
 if __name__ == '__main__':
-
-    #X = np.array(
-    #    [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
-    #).T
 
     import pandas as pd
     X = pd.read_csv('./../../ms/data_source/to_analysis/sqroot_concat.csv', index_col=0)
 
     dgufs = DGUFS()
     dgufs.fit(X.values)
-    #df_Y = pd.DataFrame(dgufs.Y.T, columns=X.columns, index=X.index)
-    #print(df_Y.columns[df_Y.sum() != 0])
+    #dgufs.labels
+
+    print(dgufs.transform(X.values).shape)
