@@ -1,13 +1,27 @@
 # -*- coding: utf-8 -*_
 #
-# utils.py
+# dgufs.py
+#
+# This module is part of dgufs
 #
 
-"""
-These implementations are based on the MATLAB code:
-https://github.com/eeGuoJun/AAAI2018_DGUFS/blob/master/JunGuo_AAAI_2018_DGUFS_code/files/speedUp.m
+import utils
+
+import numpy as np
+
+from scipy import linalg
+from scipy.spatial import distance
+from sklearn.base import BaseEstimator, TransformerMixin
 
 """
+The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
+Wenwu Zhu (2018).
+
+"""
+
+__author__ = 'Severin E. R. Langberg'
+__email__ = 'langberg91@gmail.no'
+
 
 # For Hungarian algorithm. See also: https://pypi.org/project/munkres/
 from scipy.optimize import linear_sum_assignment

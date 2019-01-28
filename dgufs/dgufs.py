@@ -2,16 +2,15 @@
 #
 # dgufs.py
 #
-# MATLAB basis for implementation:
-# https://github.com/eeGuoJun/AAAI2018_DGUFS/blob/master/JunGuo_AAAI_2018_DGUFS_code/
+# This module is part of dgufs
 #
-import numpy as np
 
 import utils
 
+import numpy as np
+
 from scipy import linalg
 from scipy.spatial import distance
-
 from sklearn.base import BaseEstimator, TransformerMixin
 
 """
@@ -19,6 +18,9 @@ The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
 Wenwu Zhu (2018).
 
 """
+
+__author__ = 'Severin E. R. Langberg'
+__email__ = 'langberg91@gmail.no'
 
 
 class DGUFS(BaseEstimator, TransformerMixin):
