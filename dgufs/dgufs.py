@@ -33,8 +33,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         num_features=2,
         num_clusters=2,
         num_neighbors=4,
-        reg_alpha=0.5,
-        reg_beta=0.5,
+        alpha=0.5,
+        beta=0.5,
         tol=5e-7,
         max_iter=1e2,
         mu=1e-6,
@@ -45,8 +45,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self.num_features = num_features
         self.num_clusters = num_clusters
         self.num_neighbors = num_neighbors
-        self.reg_alpha = reg_alpha
-        self.reg_beta = reg_beta
+        self.alpha = alpha
+        self.beta = beta
         self.tol = tol
         self.max_iter = max_iter
         self.mu = mu
@@ -68,10 +68,13 @@ class DGUFS(BaseEstimator, TransformerMixin):
             raise RuntimeError('Feature selection requires more than two '
                                'samples')
 
+        # From nrows x ncols to ncols x nrows.
+        X = np.transpose(X)
+
         H = np.eye(nrows) - np.ones((nrows, 1)) * (np.ones((1, nrows)) / nrows)
         H = H / (nrows - 1)
 
-
+        # Setup:
         Y = np.zeros((ncols, nrows), dtype=float)
         Z = np.zeros((ncols, nrows), dtype=float)
 
@@ -81,18 +84,27 @@ class DGUFS(BaseEstimator, TransformerMixin):
         Lamda1 = np.zeros((ncols, nrows), dtype=float)
         Lamda2 = np.zeros((nrows, nrows), dtype=float)
 
+
         # TEMP:
         rho = 1.1
         max_mu = 1e10
         mu = 1e-6
         # maximum number of iterations
-        max_Iter = 1e2
+        max_iter = 1#1e2
         # the other stop criterion for iteration
         tol = 5e-7
 
+        i = 1
+        while i <= max_iter:
 
+            # Update Z.
+            U = X - Y - ((1 - self.beta) * Y.dot(H).dot(L).dot(H) - Lamda1) /self. mu
+            Z = X - self.solve_l20(U, (ncols - self.num_features))
 
-        print(H)
+            print(Z)
+
+            i = i + 1
+
         # As in MATLAB implementation.
         #X = np.transpose(X)
         #X_sim = utils.similarity_matrix(X)
@@ -103,6 +115,16 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # Update Z:
         # Optimal (X - Z) with algorithm 1. Update Z by using the definition of U.
 
+    def solve_l20(self, Q, nfeats):
+
+        # b(i) is the (l2-norm)^2 of the i-th row of Q.
+        b = np.sum(Q ** 2, axis=1)[:, np.newaxis]
+        idx = np.argsort(b[:, 0])[::-1]
+
+        P = np.zeros(np.shape(Q), dtype=float)
+        P[idx[:nfeats], :] = Q[idx[:nfeats], :]
+
+        return P
 
     def transform(self, X, y=None, **kwargs):
         pass
@@ -113,6 +135,6 @@ if __name__ == '__main__':
 
     X = np.array(
         [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
-    )
+    ).T
     dgufs = DGUFS()
     dgufs.fit(X)
