@@ -104,29 +104,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
             # Update L.
             speed_up = self.speed_up(H.dot(np.transpose(Y)).dot(Z).dot(H))
             U2 = ((1 - self.beta) * speed_up + self.beta * S - Lamda2) / self.mu + M
+            L = self.solve_rank_lagrange(self.speed_up(U2), 2 * self.alpha / self.mu)
 
-            A = self.speed_up(U2)
-            eta = 2 * self.alpha / self.mu
-
-            A = 0.5 * (A + np.transpose(A))
-            tempD, tempV = eig(A)
-            # Cast complex values to real discarding the imaginary part.
-            tmpD = tempD.astype(float)
-            tempD = np.diag(tempD).astype(float)
-
-            # eta * rank(P)
-            tmpD[tmpD <= np.sqrt(eta)] = 0
-            tempD = np.diag(tmpD)
-            
-            print(tempD)
-
-            """
-            tmpD(tmpD<=sqrt(eta)) = 0; % eta*rank(P)
-            tempD = diag(tmpD);
-            P = tempV*tempD*tempV';
-
-            """
-            #L = solve_rank_lagrange(speedUp(temp2), 2*alpha/mu);
 
             i = i + 1
 
@@ -183,8 +162,22 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return C_new
 
     def solve_rank_lagrange(self, A, eta):
-        #return P
-        pass
+
+        # Guarantee symmetry.
+        A = 0.5 * (A + np.transpose(A))
+        tempD, tempV = eig(A)
+        # Cast complex values to real discarding the imaginary part.
+        tempV = tempV.astype(float)
+        tmpD = tempD.astype(float)
+
+        tempD = np.diag(tempD).astype(float)
+        # eta * rank(P)
+        tmpD[tmpD <= np.sqrt(eta)] = 0
+        tempD = np.diag(tmpD)
+
+        P = tempV.dot(tempD).dot(np.transpose(tempV))
+
+        return P
 
     def transform(self, X, y=None, **kwargs):
         pass
