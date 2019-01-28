@@ -4,7 +4,7 @@ import numpy as np
 
 import utils
 
-from scipy.linalg import eig
+from scipy import linalg
 from scipy.spatial import distance
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -111,19 +111,38 @@ class DGUFS(BaseEstimator, TransformerMixin):
             gamma = 5e-3
             M = self.solve_l0_binary(M, 2 * gamma / self.mu)
             M = M - np.diag(np.diag(M)) + np.eye(nrows)
-            print(M)
 
-            i = i + 1
+            # Check if stop criterion is satisfied.
+            leq1 = Z - Y
+            leq2 = L - M
+            # Infinite norm.
+            stopC1 = np.max(np.abs(leq1))
+            stopC2 = np.max(np.abs(leq2))
 
-        # As in MATLAB implementation.
-        #X = np.transpose(X)
-        #X_sim = utils.similarity_matrix(X)
+            if (stopC1 < self.tol) and (stopC2 < self.tol):
+                i = self.max_iter
+            else:
+                # Update Lagrange multipliers.
+                Lamda1 = Lamda1 + self.mu * leq1
+                Lamda2 = Lamda2 + self.mu * leq2
+                self.mu = min(self.max_mu, self.mu * self.rho);
 
-        # Update Y:
-        # Let U = Z + 1/mu((1 - beta)ZHLH + Lambda1): Update Y by algorithm 1.
+                # Update counter.
+                i = i + 1
 
-        # Update Z:
-        # Optimal (X - Z) with algorithm 1. Update Z by using the definition of U.
+        # Obtain labels.
+        #eigD, eigV = linalg.eigs(np.max(L, np.transpose(L)), self.num_clusters, 'la')
+        #V = eigV * np.sqrt(eigD)
+
+        # Sanity check.
+        #assert (nrows, self.num_clusters) == np.shape(V)
+
+        #[~, Label] = max(abs(V),[],2);
+        #V = V'; % final: [nClass,nSmp]=size(V)
+
+        # returns Y,L,V,Label
+        # Y are the selected features. Each column is a sample (return transposed).
+        return self
 
     @staticmethod
     def similarity_matrix(X):
@@ -171,12 +190,12 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         # Guarantee symmetry.
         A = 0.5 * (A + np.transpose(A))
-        tempD, tempV = eig(A)
-        # Cast complex values to real discarding the imaginary part.
-        tempV = tempV.astype(float)
-        tmpD = tempD.astype(float)
+        tempD, tempV = linalg.eig(A)
+        # Discard the imaginary part.
+        tempV = np.real(tempV)
+        tmpD = np.real(tempD)
 
-        tempD = np.diag(tempD).astype(float)
+        tempD = np.real(np.diag(tempD))
         # eta * rank(P)
         tmpD[tmpD <= np.sqrt(eta)] = 0
         tempD = np.diag(tmpD)
