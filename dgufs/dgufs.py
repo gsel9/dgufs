@@ -106,6 +106,12 @@ class DGUFS(BaseEstimator, TransformerMixin):
             U2 = ((1 - self.beta) * speed_up + self.beta * S - Lamda2) / self.mu + M
             L = self.solve_rank_lagrange(self.speed_up(U2), 2 * self.alpha / self.mu)
 
+            # Update M.
+            M = L + Lamda2 / self.mu
+            gamma = 5e-3
+            M = self.solve_l0_binary(M, 2 * gamma / self.mu)
+            M = M - np.diag(np.diag(M)) + np.eye(nrows)
+            print(M)
 
             i = i + 1
 
@@ -176,6 +182,19 @@ class DGUFS(BaseEstimator, TransformerMixin):
         tempD = np.diag(tmpD)
 
         P = tempV.dot(tempD).dot(np.transpose(tempV))
+
+        return P
+
+    def solve_l0_binary(self, Q, gamma):
+
+        P = np.copy(Q)
+        # Each P_ij is in {0, 1}
+        if gamma > 1:
+            P[Q > 0.5 * (gamma + 1)] = 1
+            P[Q <= 0.5 * (gamma + 1)] = 0
+        else:
+            P[Q > 1] = 1
+            P[Q < np.sqrt(gamma)] = 0
 
         return P
 
