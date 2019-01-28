@@ -17,6 +17,81 @@ from sklearn.metrics import normalized_mutual_info_score
 from sklearn.metrics.pairwise import euclidean_distances
 
 
+def similarity_matrix(X):
+
+    S = distance.squareform(distance.pdist(np.transpose(X)))
+
+    return -S / np.max(S)
+
+def solve_l20(Q, nfeats):
+
+    # b(i) is the (l2-norm)^2 of the i-th row of Q.
+    b = np.sum(Q ** 2, axis=1)[:, np.newaxis]
+    idx = np.argsort(b[:, 0])[::-1]
+
+    P = np.zeros(np.shape(Q), dtype=float)
+    P[idx[:nfeats], :] = Q[idx[:nfeats], :]
+
+    return P
+
+def speed_up(C):
+    """Refer to Simultaneous Clustering and Model Selection (SCAMS),
+    CVPR2014.
+
+    """
+    diagmask = np.eye(np.shape(C)[0], dtype=bool)
+    # Main diagonal = 0.
+    C[diagmask] = 0
+
+    # If C is (N x N), then tmp is (N*N x 1).
+    tmp = np.reshape(C, (np.size(C), 1))
+    # Remove the main diagonal elements of C in tmp. Then tmp has a
+    # length of N * (N - 1).
+    tmp = np.delete(tmp, np.where(diagmask.ravel()))
+    # Scale to [0, 1] range.
+    tmp = (tmp - np.min(tmp)) / (np.max(tmp) - np.min(tmp))
+
+    affmaxo = C
+    # affmaxo(~diagmask) is a column vector.
+    affmaxo[np.logical_not(diagmask)] = tmp
+    C_new = affmaxo
+
+    return C_new
+
+
+def solve_rank_lagrange(A, eta):
+
+    # Guarantee symmetry.
+    A = 0.5 * (A + np.transpose(A))
+    tempD, tempV = linalg.eig(A)
+    # Discard the imaginary part.
+    tempV = np.real(tempV)
+    tmpD = np.real(tempD)
+
+    tempD = np.real(np.diag(tempD))
+    # eta * rank(P)
+    tmpD[tmpD <= np.sqrt(eta)] = 0
+    tempD = np.diag(tmpD)
+
+    P = tempV.dot(tempD).dot(np.transpose(tempV))
+
+    return P
+
+
+def solve_l0_binary(Q, gamma):
+
+    P = np.copy(Q)
+    # Each P_ij is in {0, 1}
+    if gamma > 1:
+        P[Q > 0.5 * (gamma + 1)] = 1
+        P[Q <= 0.5 * (gamma + 1)] = 0
+    else:
+        P[Q > 1] = 1
+        P[Q < np.sqrt(gamma)] = 0
+
+    return P
+
+
 def best_map(L1, L2):
     """Permute labels of L2 match L1 as good as possible.
 
@@ -44,123 +119,7 @@ def best_map(L1, L2):
     return newL2
 
 
-def similarity_matrix(X, num_neighbors, gauss_weight=1):
-    """Construct a graph in an unsupervised manner."""
-
-    nrows, _ = np.shape(X)
-
-    X = np.transpose(X)
-
-    dist = euclidean_distances(X)
-    sigma = 4 * np.mean(np.mean(dist))
-
-    idx = np.argsort(dist, axis=2)
-    idx = idx[:, :num_neighbors]
-    """
-    # TODO:
-    G = np.trim_zeros(
-        np.tile(),
-
-    )
-
-    sparse(
-        np.tile(
-            range(nrows),
-        )
-        repmat(
-            [1:nSmp].T, [k,1]
-        ), idx, np.ones((np.size(idx), 1)
-        ),
-        nrows, nrows
-    )
-    %%% the i_th row of matrix G stores the information of the
-    %%% i_th sample's k neighbors. (1: is a neighbor, 0: is not)
-    if num ~= 1
-        W = (exp(-Dist/sigma)).*G; % Gaussian kernel weight
-        W = full(0.5*(W+W')); % guarantee symmetry
-    else
-        W = G; % 0-1 weight
-        W = full(max(W,W')); % guarantee symmetry
-    end
-
-    L = full(max(L,L')); % guarantee symmetry
-    """
-
-def euclidean_distance_matrix():
-
-    pass
-
-
 def normalized_mutual_information(y_true, y_pred):
     """Normalized Mutual Information between two clusterings."""
 
     return normalized_mutual_info_score(y_true, y_pred)
-
-
-def solve_l0_binary(Q, gamma):
-    """
-    % solve the following problem:
-    % min_P  ||P - Q||_F^2 + gamma*||P||_0
-    %  s.t.  each P_ij is in [0,1] or {0,1}
-    % gamma <= 1 : [0,1]
-    % gamma > 1  : {0,1}
-    % P and Q are matrixes.
-    """
-
-    P = Q
-    if gamma > 1:
-        P[Q > 0.5 * (gamma + 1)] = 1
-        P[Q <= 0.5 * (gamma + 1)] = 0
-    else:
-        P[Q > 1] = 1
-        P[Q < np.sqrt(gamma)] = 0
-
-    return P
-
-
-def solve_l20(Q, m):
-    """
-    % solve the following problem:
-    % min_P  ||P - Q||_F^2
-    %  s.t.  ||P||_2,0 <= m
-    """
-    b = np.sum(Q ** 2, axis=2)
-    P = np.zeros(np.size(Q))
-
-    idx = np.argsort(b)[::-1]
-    P[idx[:m], :] = Q[idx[:m], :]
-
-    return P
-
-
-def solve_rank_lagrange(A, eta):
-    """
-    % solve the following problem:
-    % min_P  ||P - A||_F^2 + eta*rank(P)
-    %  s.t.  P is symmetric and positive semi-definite
-    """
-    A = 0.5 * (A + A.T)
-    eig_vecs, eig_vals, _ = np.eig(A)
-    tmpD = np.diag(eig_vals)
-    tmpD[eig_vals <= np.sqrt(eta)] = 0
-    tempD = np.diag(eig_vals)
-    P = eig_vecs * eig_vals * eig_vecs.T
-
-    return P
-
-
-def speed_up(C):
-    # Refer to SCAMS: Simultaneous Clustering and Model Selection, CVPR2014
-    diagmask = np.logical(np.eye(np.size(C, axis=1)))
-    C[diagmask] = 0
-
-    tmp = C[:]
-    tmp[diagmask[:]] = []
-    # Mix-max scaling?
-    tmp = (tmp - np.min(tmp)) / (np.max(tmp - np.min(tmp)))
-
-    affmaxo = C
-    affmaxo[not diagmask] = tmp
-    Cnew = affmaxo
-
-    return Cnew

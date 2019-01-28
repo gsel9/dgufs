@@ -16,11 +16,6 @@ https://github.com/eeGuoJun/AAAI2018_DGUFS/blob/master/JunGuo_AAAI_2018_DGUFS_co
 """
 
 
-def feature_screening():
-    # PArallelizable work func for feature screening.
-    pass
-
-
 # Checkout: https://github.com/eeGuoJun/AAAI2018_DGUFS/tree/master/JunGuo_AAAI_2018_DGUFS_code
 class DGUFS(BaseEstimator, TransformerMixin):
     """The Dependence Guided Unsupervised Feature Selection (DGUFS) algorithm
@@ -38,7 +33,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         alpha=0.5,
         beta=0.9,
         tol=5e-7,
-        max_iter=1e2,
+        max_iter=1, #1e2,
         mu=1e-6,
         max_mu=1e10,
         rho=1.1
@@ -86,10 +81,6 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         Lamda1 = np.zeros((ncols, nrows), dtype=float)
         Lamda2 = np.zeros((nrows, nrows), dtype=float)
-
-
-        # TEMP:
-        max_iter = 1#1e2
 
         i = 1
         while i <= max_iter:
@@ -146,14 +137,13 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         return Y.T
 
-    @staticmethod
     def similarity_matrix(X):
 
         S = distance.squareform(distance.pdist(np.transpose(X)))
 
         return -S / np.max(S)
 
-    def solve_l20(self, Q, nfeats):
+    def solve_l20(Q, nfeats):
 
         # b(i) is the (l2-norm)^2 of the i-th row of Q.
         b = np.sum(Q ** 2, axis=1)[:, np.newaxis]
@@ -164,7 +154,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         return P
 
-    def speed_up(self, C):
+    def speed_up(C):
         """Refer to Simultaneous Clustering and Model Selection (SCAMS),
         CVPR2014.
 
@@ -188,7 +178,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         return C_new
 
-    def solve_rank_lagrange(self, A, eta):
+    def solve_rank_lagrange(A, eta):
 
         # Guarantee symmetry.
         A = 0.5 * (A + np.transpose(A))
@@ -206,7 +196,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         return P
 
-    def solve_l0_binary(self, Q, gamma):
+    def solve_l0_binary(Q, gamma):
 
         P = np.copy(Q)
         # Each P_ij is in {0, 1}
