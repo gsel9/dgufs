@@ -25,7 +25,16 @@ class DGUFS(BaseEstimator, TransformerMixin):
     """The Dependence Guided Unsupervised Feature Selection (DGUFS) algorithm
     developed by Jun Guo and Wenwu Zhu.
 
-    alpha (): Regularization term for the Lagrange multipliers.
+    num_features (int): The number of features to select.
+    num_clusters (int):
+    alpha (): Regularization parameter
+    beta (): Regularization parameter
+    tol (float): Tolerance used to determine optimization convergance. Defaults
+        to 5e-7.
+    max_iter (): The maximum number of iterations of the
+    mu ():
+    max_mu ():
+    rho ():
 
     """
 
@@ -33,7 +42,6 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self,
         num_features=2,
         num_clusters=2,
-        num_neighbors=2,
         alpha=0.5,
         beta=0.9,
         tol=5e-7,
@@ -45,7 +53,6 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         self.num_features = num_features
         self.num_clusters = num_clusters
-        self.num_neighbors = num_neighbors
         self.alpha = alpha
         self.beta = beta
         self.tol = tol
@@ -65,8 +72,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self.Lamda2 = None
 
     def _construct_matrices(self, nrows, ncols):
-        # Setup:
-
+        # Setup.
         self.Y = np.zeros((ncols, nrows), dtype=float)
         self.Z = np.zeros((ncols, nrows), dtype=float)
 
@@ -79,7 +85,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def _check_X(self, X):
-
+        # Type checking and formatting of feature matrix.
         nrows, ncols = np.shape(X)
         if self.num_features > ncols:
             raise ValueError('Number of features to select exceeds the number '
@@ -87,7 +93,6 @@ class DGUFS(BaseEstimator, TransformerMixin):
         if nrows < 2:
             raise RuntimeError('Feature selection requires more than two '
                                'samples')
-
         # NB: From nrows x ncols to ncols x nrows as algorithm given in the
         # paper.
         X_trans = np.transpose(X)
@@ -99,9 +104,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         """Returns the column indicators of selected features."""
 
         # Select features based on where the transformed feature matrix has
-        # column sums dofferent from zero.
+        # column sums != 0.
         selected_cols = np.squeeze(np.where(np.sum(self.Y.T, axis=0) != 0))
-
         # Sanity check.
         assert len(selected_cols) == self.num_features
 
