@@ -5,13 +5,15 @@
 # This module is part of dgufs
 #
 
-import numpy as np
+import pytest
 
-from dgufs.dgufs import DGUFS
+import numpy as np
 
 from scipy import linalg
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator, TransformerMixin
+
+from dgufs.dgufs import DGUFS
 
 """
 The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
@@ -23,15 +25,9 @@ __author__ = 'Severin E. R. Langberg'
 __email__ = 'langberg91@gmail.no'
 
 
-
-import pytest
-
-import numpy as np
-
-
 @pytest.fixture
-def data(_):
-
+def data():
+    # Creates test data.
     X = np.array(
         [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
     )
@@ -39,5 +35,9 @@ def data(_):
 
 
 def test_num_features(data):
+    """Test the exact number of features are selected."""
 
-    X = data(None)
+    for num_features in [2, 3, 4]:
+        dgufs = DGUFS(num_features=num_features)
+        dgufs.fit(data)
+        assert len(dgufs.indicators) == num_features
