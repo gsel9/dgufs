@@ -4,7 +4,7 @@ import numpy as np
 
 import utils
 
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial import distance
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -71,6 +71,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # From nrows x ncols to ncols x nrows.
         X = np.transpose(X)
 
+        S = self.similarity_matrix(X)
+
         H = np.eye(nrows) - np.ones((nrows, 1)) * (np.ones((1, nrows)) / nrows)
         H = H / (nrows - 1)
 
@@ -105,7 +107,11 @@ class DGUFS(BaseEstimator, TransformerMixin):
             U1 = Z + ((1 - self.beta) * Z.dot(H).dot(L).dot(H) + Lamda1) / self.mu
             Y = self.solve_l20(U1, self.num_features)
 
-            print(Y)
+            # Update L.
+            speed_up = self.speed_up(H.dot(np.transpose(Y)).dot(Z).dot(H))
+            temp2 = ((1 - self.beta) * speed_up + self.beta * S - Lamda2) / self.mu + M
+
+            #L = solve_rank_lagrange(speedUp(temp2), 2*alpha/mu);
 
             i = i + 1
 
@@ -119,6 +125,12 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # Update Z:
         # Optimal (X - Z) with algorithm 1. Update Z by using the definition of U.
 
+    def similarity_matrix(X):
+
+        S = distance.squareform(distance.pdist(np.transpose(X)))
+
+        return -S / np.max(S)
+
     def solve_l20(self, Q, nfeats):
 
         # b(i) is the (l2-norm)^2 of the i-th row of Q.
@@ -130,6 +142,9 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         return P
 
+    def speed_up(self):
+        pass
+
     def transform(self, X, y=None, **kwargs):
         pass
 
@@ -140,5 +155,7 @@ if __name__ == '__main__':
     X = np.array(
         [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
     ).T
-    dgufs = DGUFS()
-    dgufs.fit(X)
+    #dgufs = DGUFS()
+    #dgufs.fit(X)
+
+    print(X)
