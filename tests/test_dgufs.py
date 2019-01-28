@@ -5,9 +5,9 @@
 # This module is part of dgufs
 #
 
-import utils
-
 import numpy as np
+
+from dgufs.dgufs import DGUFS
 
 from scipy import linalg
 from scipy.spatial import distance
