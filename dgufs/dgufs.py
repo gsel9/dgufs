@@ -23,9 +23,10 @@ def feature_screening():
 
 # Checkout: https://github.com/eeGuoJun/AAAI2018_DGUFS/tree/master/JunGuo_AAAI_2018_DGUFS_code
 class DGUFS(BaseEstimator, TransformerMixin):
-    """
+    """The Dependence Guided Unsupervised Feature Selection (DGUFS) algorithm
+    developed by Jun Guo and Wenwu Zhu.
 
-    reg_alpha (): Regularizationterm for the Lagrange multiplier
+    alpha (): Regularization term for the Lagrange multipliers.
 
     """
 
@@ -228,7 +229,7 @@ if __name__ == '__main__':
     #X = np.array(
     #    [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
     #).T
-    
+
     import pandas as pd
     X = pd.read_csv('./../../ms/data_source/to_analysis/sqroot_concat.csv', index_col=0)
 
