@@ -5,8 +5,6 @@
 # This module is part of dgufs
 #
 
-import utils
-
 import numpy as np
 
 from scipy import linalg
@@ -40,8 +38,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 def similarity_matrix(X):
     """"""
 
-    S = distance.squareform(distance.pdist(np.transpose(X)))
-
+    S = distance.squareform(distance.pdist(X))
     return -S / np.max(S)
 
 # Implemented experimental version.
