@@ -142,7 +142,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         # returns Y,L,V,Label
         # Y are the selected features. Each column is a sample (return transposed).
-        return self
+
+        return Y.T
 
     @staticmethod
     def similarity_matrix(X):
@@ -224,8 +225,15 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
 if __name__ == '__main__':
 
-    X = np.array(
-        [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
-    ).T
+    #X = np.array(
+    #    [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
+    #).T
+    
+    import pandas as pd
+    X = pd.read_csv('./../../ms/data_source/to_analysis/sqroot_concat.csv', index_col=0)
+
     dgufs = DGUFS()
-    dgufs.fit(X)
+    dgufs.fit(X.values)
+    #df_Y = pd.DataFrame(Y, columns=X.columns, index=X.index)
+    #print(df_Y)
+    #print(df_Y.columns[df_Y.sum() != 0])
