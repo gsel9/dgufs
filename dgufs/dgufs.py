@@ -47,7 +47,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         num_clusters=2,
         alpha=0.5,
         beta=0.9,
-        tol=10−6,
+        tol=1e-6,
         max_iter=1e2,
         mu=1e-6,
         max_mu=1e10,

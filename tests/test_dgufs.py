@@ -41,7 +41,7 @@ def test_correct_num_features(data):
     for num_features in [2, 3, 4]:
         dgufs = DGUFS(num_features=num_features)
         dgufs.fit(data)
-        assert len(dgufs.indicators) == num_features
+        assert len(dgufs.support) == num_features
 
 
 def test_error_num_features(data):
@@ -113,4 +113,4 @@ def test_iris(iris):
     dgufs = DGUFS(num_features=2)
     dgufs.fit(iris)
 
-    assert len(dgufs.indicators) == 2
+    assert len(dgufs.support) == 2
