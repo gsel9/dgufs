@@ -193,7 +193,6 @@ class DGUFS(BaseEstimator, TransformerMixin):
             self.H.dot(np.transpose(self.Y)).dot(self.Z).dot(self.H)
         )
         U = ((1 - self.beta) * speed_up + self.beta * self.S - self.Lamda2)
-        # Solve
         self.L = utils.solve_rank_lagrange(
             utils.speed_up(U / self.mu + self.M), 2 * self.alpha / self.mu
         )
