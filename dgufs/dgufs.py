@@ -33,7 +33,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
     alpha (): Regularization parameter
     beta (): Regularization parameter
     tol (float): Tolerance used to determine optimization convergance. Defaults
-        to 5e-7.
+        to 10e-6 as suggested in the paper.
     max_iter (): The maximum number of iterations of the
     mu ():
     max_mu ():
@@ -47,7 +47,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         num_clusters=2,
         alpha=0.5,
         beta=0.9,
-        tol=5e-7,
+        tol=10−6,
         max_iter=1e2,
         mu=1e-6,
         max_mu=1e10,
@@ -194,17 +194,17 @@ class DGUFS(BaseEstimator, TransformerMixin):
         )
         U = ((1 - self.beta) * speed_up + self.beta * self.S - self.Lamda2)
         # Solve
-        L = utils.solve_rank_lagrange(
+        self.L = utils.solve_rank_lagrange(
             utils.speed_up(U / self.mu + self.M), 2 * self.alpha / self.mu
         )
         return self
 
     def _update_M(self, nrows, gamma=5e-3):
         # Updates the M matrix.
-        M = self.L + self.Lamda2 / self.mu
-        M = utils.solve_l0_binary(M, 2 * gamma / self.mu)
+        _M = self.L + self.Lamda2 / self.mu
+        _M = utils.solve_l0_binary(_M, 2 * gamma / self.mu)
 
-        self.M = M - np.diag(np.diag(M)) + np.eye(nrows)
+        self.M = _M - np.diag(np.diag(_M)) + np.eye(nrows)
 
         return self
 
