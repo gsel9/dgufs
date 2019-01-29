@@ -18,7 +18,8 @@ __email__ = 'langberg91@gmail.no'
 import numpy as np
 import pandas as pd
 
-from dgufs import utils
+#from dgufs import utils
+import utils
 
 from scipy import linalg
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -240,7 +241,14 @@ if __name__ == '__main__':
     from sklearn.preprocessing import StandardScaler
 
     iris = load_iris(return_X_y=False)
+
+    scaler = StandardScaler()
+
     X, y = iris.data, iris.target
+    X_std = scaler.fit_transform(X)
 
     dgufs = DGUFS(num_features=2)
-    dgufs.fit(X)
+    dgufs.fit(X_std)
+
+    X_sub = X[:, dgufs.support]
+    print(X_sub.shape)
