@@ -18,16 +18,11 @@ __email__ = 'langberg91@gmail.no'
 import numpy as np
 import pandas as pd
 
-from dgufs import utils
+import utils
+#from dgufs import utils
 
 from scipy import linalg
 from sklearn.base import BaseEstimator, TransformerMixin
-
-from smac.configspace import ConfigurationSpace
-from ConfigSpace.conditions import InCondition
-from ConfigSpace.hyperparameters import CategoricalHyperparameter
-from ConfigSpace.hyperparameters import UniformFloatHyperparameter
-from ConfigSpace.hyperparameters import UniformIntegerHyperparameter
 
 
 class DGUFS(BaseEstimator, TransformerMixin):
@@ -139,7 +134,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         V = np.dot(eigV, np.sqrt(eigD + self.tol))
         label = np.argmax(V, axis=0)
 
-        return np.transpose(V)
+        return V
 
     def fit(self, X, **kwargs):
         """Select features from X.
@@ -258,8 +253,9 @@ if __name__ == '__main__':
     X, y = iris.data, iris.target
     X_std = scaler.fit_transform(X)
 
-    dgufs = DGUFS(num_features=2)
+    dgufs = DGUFS(num_features=3)
     dgufs.fit(X_std)
 
     X_sub = X[:, dgufs.support]
     print(X_sub.shape)
+    
