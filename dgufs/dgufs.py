@@ -18,11 +18,16 @@ __email__ = 'langberg91@gmail.no'
 import numpy as np
 import pandas as pd
 
-#from dgufs import utils
-import utils
+from dgufs import utils
 
 from scipy import linalg
 from sklearn.base import BaseEstimator, TransformerMixin
+
+from smac.configspace import ConfigurationSpace
+from ConfigSpace.conditions import InCondition
+from ConfigSpace.hyperparameters import CategoricalHyperparameter
+from ConfigSpace.hyperparameters import UniformFloatHyperparameter
+from ConfigSpace.hyperparameters import UniformIntegerHyperparameter
 
 
 class DGUFS(BaseEstimator, TransformerMixin):
@@ -31,8 +36,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
     num_features (int): The number of features to select.
     num_clusters (int):
-    alpha (): Regularization parameter
-    beta (): Regularization parameter
+    alpha (): Regularization parameter from the range ().
+    beta (): Regularization parameter > 0.
     tol (float): Tolerance used to determine optimization convergance. Defaults
         to 10e-6 as suggested in the paper.
     max_iter (): The maximum number of iterations of the
@@ -41,6 +46,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
     rho ():
 
     """
+
+    NAME = 'DGUFSSelection'
 
     def __init__(
         self,
@@ -88,6 +95,10 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         return self
 
+    def __name__(self):
+
+        return self.NAME
+
     def _check_X(self, X):
         # Type checking and formatting of feature matrix.
         nrows, ncols = np.shape(X)
@@ -124,8 +135,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # Discard imaginary parts and truncate assuming comps are sorted.
         eigD = np.real(np.diag(eigD)[:self.num_clusters, :self.num_clusters])
         eigV = np.real(eigV[:, :self.num_clusters])
-
-        V = np.dot(eigV, np.sqrt(eigD))
+        # NOTE: To avoid
+        V = np.dot(eigV, np.sqrt(eigD + self.tol))
         label = np.argmax(V, axis=0)
 
         return np.transpose(V)
@@ -175,7 +186,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
     def _update_Z(self, X, ncols):
         # Updates the Z matrix.
         YHLH = self.Y.dot(self.H).dot(self.L).dot(self.H)
-        U = X - self.Y - (((1 - self.beta) * YHLH - self.Lamda1) / self. mu)
+        U = X - self.Y - (((1 - self.beta) * YHLH - self.Lamda1) / self.mu)
         self.Z = X - utils.solve_l20(U, (ncols - self.num_features))
 
         return self
