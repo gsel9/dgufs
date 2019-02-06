@@ -74,6 +74,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self.Z = None
         self.M = None
         self.L = None
+        self.V = None
         self.Lamda1 = None
         self.Lamda2 = None
 
@@ -122,7 +123,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return selected_cols
 
     @property
-    def cluster_labels(self):
+    def memberships(self):
+        """Return the cluster indicator labels for each obeservation."""
 
         # NOTE: Alternatively use scipy.sparse.linalg.eigs with
         # k=self.num_clusters.
@@ -130,11 +132,10 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # Discard imaginary parts and truncate assuming comps are sorted.
         eigD = np.real(np.diag(eigD)[:self.num_clusters, :self.num_clusters])
         eigV = np.real(eigV[:, :self.num_clusters])
-        # NOTE: To avoid
-        V = np.dot(eigV, np.sqrt(eigD + self.tol))
-        label = np.argmax(V, axis=0)
-
-        return V
+        self.V = np.dot(eigV, np.sqrt(eigD))
+        # The final cluster labels can be obtained by determining the position
+        # of the largest element at each cluster indicator in V.
+        return np.argmax(self.V, axis=1)
 
     def fit(self, X, **kwargs):
         """Select features from X.
@@ -253,9 +254,10 @@ if __name__ == '__main__':
     X, y = iris.data, iris.target
     X_std = scaler.fit_transform(X)
 
-    dgufs = DGUFS(num_features=3)
+    dgufs = DGUFS(num_features=4, num_clusters=3)
     dgufs.fit(X_std)
 
-    X_sub = X[:, dgufs.support]
-    print(X_sub.shape)
-    
+    print(dgufs.memberships)
+
+    #X_sub = X[:, dgufs.support]
+    #print(X_sub.shape)
