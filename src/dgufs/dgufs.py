@@ -17,11 +17,9 @@ __email__ = "langberg91@gmail.com"
 
 import numpy as np
 import pandas as pd
-import utils
+from dgufs import utils
 from scipy import linalg
 from sklearn.base import BaseEstimator, TransformerMixin
-
-# from dgufs import utils
 
 
 class DGUFS(BaseEstimator, TransformerMixin):
@@ -235,23 +233,3 @@ class DGUFS(BaseEstimator, TransformerMixin):
             raise TypeError("Cannot transform data of type {}".format(type(X)))
 
         return output
-
-
-if __name__ == "__main__":
-    from sklearn.datasets import load_iris
-    from sklearn.preprocessing import StandardScaler
-
-    iris = load_iris(return_X_y=False)
-
-    scaler = StandardScaler()
-
-    X, y = iris.data, iris.target
-    X_std = scaler.fit_transform(X)
-
-    dgufs = DGUFS(num_features=4, num_clusters=3)
-    dgufs.fit(X_std)
-
-    print(dgufs.memberships)
-
-    # X_sub = X[:, dgufs.support]
-    # print(X_sub.shape)
