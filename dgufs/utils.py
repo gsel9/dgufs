@@ -11,8 +11,8 @@ Wenwu Zhu (2018).
 
 """
 
-__author__ = 'Severin E. R. Langberg'
-__email__ = 'langberg91@gmail.no'
+__author__ = 'Severin Elvatun'
+__email__ = 'langberg91@gmail.com'
 
 
 import numpy as np

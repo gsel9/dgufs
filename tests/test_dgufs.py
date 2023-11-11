@@ -14,8 +14,8 @@ from dgufs.dgufs import DGUFS
 from sklearn.datasets import load_iris
 
 
-__author__ = 'Severin E. R. Langberg'
-__email__ = 'langberg91@gmail.no'
+__author__ = 'Severin Elvatun'
+__email__ = 'langberg91@gmail.com'
 
 
 @pytest.fixture
