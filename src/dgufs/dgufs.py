@@ -11,18 +11,17 @@ Wenwu Zhu (2018).
 
 """
 
-__author__ = 'Severin Elvatun'
-__email__ = 'langberg91@gmail.com'
+__author__ = "Severin Elvatun"
+__email__ = "langberg91@gmail.com"
 
 
 import numpy as np
 import pandas as pd
-
 import utils
-#from dgufs import utils
-
 from scipy import linalg
 from sklearn.base import BaseEstimator, TransformerMixin
+
+# from dgufs import utils
 
 
 class DGUFS(BaseEstimator, TransformerMixin):
@@ -39,10 +38,9 @@ class DGUFS(BaseEstimator, TransformerMixin):
     mu ():
     max_mu ():
     rho ():
-
     """
 
-    NAME = 'DGUFSSelection'
+    NAME = "DGUFSSelection"
 
     def __init__(
         self,
@@ -54,9 +52,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         max_iter=1e2,
         mu=1e-6,
         max_mu=1e10,
-        rho=1.1
+        rho=1.1,
     ):
-
         self.num_features = num_features
         self.num_clusters = num_clusters
         self.alpha = alpha
@@ -92,18 +89,18 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def __name__(self):
-
         return self.NAME
 
     def _check_X(self, X):
         # Type checking and formatting of feature matrix.
         nrows, ncols = np.shape(X)
         if self.num_features > ncols:
-            raise ValueError('Number of features to select exceeds the number '
-                             'of columns in X ({})'.format(ncols))
+            raise ValueError(
+                "Number of features to select exceeds the number "
+                "of columns in X ({})".format(ncols)
+            )
         if nrows < 2:
-            raise RuntimeError('Feature selection requires more than two '
-                               'samples')
+            raise RuntimeError("Feature selection requires more than two " "samples")
         # NB: From nrows x ncols to ncols x nrows as algorithm given in the
         # paper.
         X_trans = np.transpose(X)
@@ -130,8 +127,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
         # k=self.num_clusters.
         eigD, eigV = linalg.eig(np.maximum(self.L, np.transpose(self.L)))
         # Discard imaginary parts and truncate assuming comps are sorted.
-        eigD = np.real(np.diag(eigD)[:self.num_clusters, :self.num_clusters])
-        eigV = np.real(eigV[:, :self.num_clusters])
+        eigD = np.real(np.diag(eigD)[: self.num_clusters, : self.num_clusters])
+        eigV = np.real(eigV[:, : self.num_clusters])
         self.V = np.dot(eigV, np.sqrt(eigD))
         # The final cluster labels can be obtained by determining the position
         # of the largest element at each cluster indicator in V.
@@ -155,7 +152,6 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         i = 1
         while i <= self.max_iter:
-
             # Alternate optimization of matrices.
             self._update_Z(X_trans, ncols)
             self._update_Y()
@@ -173,7 +169,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
                 # Update Lagrange multipliers.
                 self.Lamda1 = self.Lamda1 + self.mu * leq1
                 self.Lamda2 = self.Lamda2 + self.mu * leq2
-                self.mu = min(self.max_mu, self.mu * self.rho);
+                self.mu = min(self.max_mu, self.mu * self.rho)
                 # Update counter.
                 i = i + 1
 
@@ -200,7 +196,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         speed_up = utils.speed_up(
             self.H.dot(np.transpose(self.Y)).dot(self.Z).dot(self.H)
         )
-        U = ((1 - self.beta) * speed_up + self.beta * self.S - self.Lamda2)
+        U = (1 - self.beta) * speed_up + self.beta * self.S - self.Lamda2
         self.L = utils.solve_rank_lagrange(
             utils.speed_up(U / self.mu + self.M), 2 * self.alpha / self.mu
         )
@@ -231,19 +227,17 @@ class DGUFS(BaseEstimator, TransformerMixin):
         if isinstance(X, pd.DataFrame):
             data = X.values
             output = pd.DataFrame(
-                data[:, self.support],
-                columns=X.columns[self.support],
-                index=X.index
+                data[:, self.support], columns=X.columns[self.support], index=X.index
             )
         elif isinstance(X, np.ndarray):
             output = X[:, self.support]
         else:
-            raise TypeError('Cannot transform data of type {}'.format(type(X)))
+            raise TypeError("Cannot transform data of type {}".format(type(X)))
 
         return output
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from sklearn.datasets import load_iris
     from sklearn.preprocessing import StandardScaler
 
@@ -259,5 +253,5 @@ if __name__ == '__main__':
 
     print(dgufs.memberships)
 
-    #X_sub = X[:, dgufs.support]
-    #print(X_sub.shape)
+    # X_sub = X[:, dgufs.support]
+    # print(X_sub.shape)
