@@ -5,25 +5,20 @@
 # This module is part of dgufs
 #
 
-import pytest
-
 import numpy as np
+import pytest
+from sklearn.datasets import load_iris
 
 from dgufs.dgufs import DGUFS
 
-from sklearn.datasets import load_iris
-
-
-__author__ = 'Severin Elvatun'
-__email__ = 'langberg91@gmail.com'
+__author__ = "Severin Elvatun"
+__email__ = "langberg91@gmail.com"
 
 
 @pytest.fixture
 def data():
     """Return arbitrary test data."""
-    X = np.array(
-        [[ 1, -4, 22], [12,  4,  0], [12,  0, -2], [12,  15, -2], [9,  3, 0]]
-    )
+    X = np.array([[1, -4, 22], [12, 4, 0], [12, 0, -2], [12, 15, -2], [9, 3, 0]])
     return np.transpose(X)
 
 
@@ -53,9 +48,8 @@ def test_error_num_features(data):
 
 
 def test_X_Z_norm(data):
-
-    #dgufs = DGUFS(num_features=num_features)
-    #dgufs.fit(data)
+    # dgufs = DGUFS(num_features=num_features)
+    # dgufs.fit(data)
 
     # test: norm(X - Z)_(2, 0) = d - m
     pass
@@ -84,7 +78,7 @@ def test_M(data):
 
 # TODO: rank(L) = c, diag(L) = Identity
 def test_L(data):
-    """ Test properties of L matrix."""
+    """Test properties of L matrix."""
 
     dgufs = DGUFS()
     dgufs.fit(data)
@@ -92,9 +86,9 @@ def test_L(data):
     # Test L is positive semi-definite.
     assert np.all(np.linalg.eigvals(dgufs.L) >= 0)
     # Test rank(L) = c
-    #assert np.linalg.matrix_rank(dgufs.L) == dgufs.num_clusters
+    # assert np.linalg.matrix_rank(dgufs.L) == dgufs.num_clusters
     # Test diag(L) = Identity
-    #assert np.array_equal(np.diag(dgufs.L), np.eye(np.shape(dgufs.L)))
+    # assert np.array_equal(np.diag(dgufs.L), np.eye(np.shape(dgufs.L)))
 
 
 def test_V(data):
