@@ -1,7 +1,14 @@
 # NAme of the GitHub Actions workflow 
 name: CI
 
+# Controls when the workflow will run   
 on: [push, pull_request]
+  # Trigger the workflow only for push or PR to main 
+  # branch 
+  #push:
+  #  branches: [ main ]
+  #pull_request:
+  #  branches: [ main ]
 
 jobs:
   ci:
@@ -18,16 +25,16 @@ jobs:
     - name: Check-out repository
       uses: actions/checkout@v2
 
-    - name: Install poetry
-      uses: snok/install-poetry@v1
-
-    - name: Install package
-      run: poetry install
+    - name: Install packages
+      run: pip install -r REQUIREMENTS.txt
 
     - name: Test with pytest
-      run: poetry run pytest tests/ --cov=pycounts --cov-report=xml
+      run: pytest tests/ --cov=pycounts --cov-report=xml
 
     - name: Use Codecov to track coverage
       uses: codecov/codecov-action@v2
       with:
         files: ./coverage.xml   # coverage report
+
+    - name: Build documentation
+      run: make html --directory docs/
