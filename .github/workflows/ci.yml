@@ -29,7 +29,7 @@ jobs:
       run: pip install -r REQUIREMENTS.txt
 
     - name: Test with pytest
-      run: pytest tests/ --cov=pycounts --cov-report=xml
+      run: pytest tests/ --cov=dgufs --cov-report=xml
 
     - name: Use Codecov to track coverage
       uses: codecov/codecov-action@v2
