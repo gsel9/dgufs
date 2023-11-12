@@ -1,33 +1,33 @@
 # NAme of the GitHub Actions workflow 
 name: CI
 
-# Controls when the workflow will run 
-on:
-  # Trigger the workflow only for push or PR to main 
-  # branch 
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  
-  # Enable running the workflow manually fro mthe Actions tab 
-  workflow_dispatch:
+on: [push, pull_request]
 
 jobs:
-  build:
+  ci:
+    # Set up operating system
     runs-on: ubuntu-latest
 
+    # Define job steps
     steps:
-      # Checks-out your repository so your job can access it
-      - name: Check-out repository
-        uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+    - name: Check-out repository
+      uses: actions/checkout@v2
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+    - name: Install poetry
+      uses: snok/install-poetry@v1
+
+    - name: Install package
+      run: poetry install
+
+    - name: Test with pytest
+      run: poetry run pytest tests/ --cov=pycounts --cov-report=xml
+
+    - name: Use Codecov to track coverage
+      uses: codecov/codecov-action@v2
+      with:
+        files: ./coverage.xml   # coverage report
