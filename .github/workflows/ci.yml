@@ -17,7 +17,7 @@ jobs:
 
     # Define job steps
     steps:
-    - name: Set up Python 3.9
+    - name: Set up Python 
       uses: actions/setup-python@v2
       with:
         python-version: "3.x"
@@ -25,13 +25,10 @@ jobs:
     - name: Check-out repository
       uses: actions/checkout@v2
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r REQUIREMENTS.txt
-
     - name: Install package
-      run: pip install .
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install .
 
     - name: Test with pytest
       run: |
