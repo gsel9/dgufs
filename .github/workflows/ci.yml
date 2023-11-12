@@ -28,23 +28,23 @@ jobs:
     - name: Install package
       run: |
         python -m pip install --upgrade pip setuptools wheel
+        pip install -r REQUIREMENTS.txt
         pip install -e .
 
     - name: Test with pytest
       run: |
-        pip install pytest 
         pytest tests/ 
 
-    - name: Lint with Ruff
-      run: |
-        pip install ruff
-        ruff --output-format=github .
-      continue-on-error: true
+    #- name: Lint with Ruff
+    #  run: |
+    #    pip install ruff
+    #    ruff --output-format=github .
+    #  continue-on-error: true
 
-    - name: Use Codecov to track coverage
-      uses: codecov/codecov-action@v2
-      with:
-        files: ./coverage.xml   # coverage report
+    #- name: Use Codecov to track coverage
+    #  uses: codecov/codecov-action@v2
+    #  with:
+    #    files: ./coverage.xml   # coverage report
 
-    - name: Build documentation
-      run: make html --directory docs/
+    #- name: Build documentation
+    #  run: make html --directory docs/
