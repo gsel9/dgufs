@@ -54,7 +54,6 @@ setup(
     license=proj_license(),
     name=PACKAGE_NAME,
     version=VERSION,
-    py_modules=["dgufs"],
     packages=find_packages(exclude=["test", "tests.*"]),
     setup_requires=["pytest-runner"],
     tests_require=TESTS_REQUIRE,

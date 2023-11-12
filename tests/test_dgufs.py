@@ -7,9 +7,8 @@
 
 import numpy as np
 import pytest
+from dgufs import DGUFS  # .dgufs import DGUFS
 from sklearn.datasets import load_iris
-
-from dgufs.dgufs import DGUFS
 
 __author__ = "Severin Elvatun"
 __email__ = "langberg91@gmail.com"
