@@ -1,20 +1,8 @@
-# -*- coding: utf-8 -*_
-#
-# dgufs.py
-#
-# This module is part of dgufs
-#
-
 """
 The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
 Wenwu Zhu (2018).
-
 """
-
-__author__ = "Severin Elvatun"
-__email__ = "langberg91@gmail.com"
-
-
+# third party
 import numpy as np
 import pandas as pd
 from dgufs import utils

@@ -1,24 +1,15 @@
-# -*- coding: utf-8 -*_
-#
-# dgufs.py
-#
-# This module is part of dgufs
-#
-
 """
 The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
 Wenwu Zhu (2018).
-
 """
-
-__author__ = 'Severin Elvatun'
-__email__ = 'langberg91@gmail.com'
-
 
 import numpy as np
 
+# third party
+import scipy
 from scipy import linalg
 from scipy.spatial import distance
+from sklearn.metrics import normalized_mutual_info_score
 
 
 def similarity_matrix(X):
@@ -31,21 +22,22 @@ def similarity_matrix(X):
 def centering_matrix(nrows):
     """"""
 
-    scaled = (np.ones((1, nrows)) / nrows)
+    scaled = np.ones((1, nrows)) / nrows
     H = np.eye(nrows) - np.ones((nrows, 1)) * scaled
     # Experimental version where H := H / (n - 1).
     return H / (nrows - 1)
 
-def solve_l20(Q, nfeats):
 
+def solve_l20(Q, nfeats):
     # b(i) is the (l2-norm)^2 of the i-th row of Q.
-    b = np.sum(Q ** 2, axis=1)[:, np.newaxis]
+    b = np.sum(Q**2, axis=1)[:, np.newaxis]
     idx = np.argsort(b[:, 0])[::-1]
 
     P = np.zeros(np.shape(Q), dtype=float)
     P[idx[:nfeats], :] = Q[idx[:nfeats], :]
 
     return P
+
 
 def speed_up(C):
     """Refer to Simultaneous Clustering and Model Selection (SCAMS),
@@ -108,24 +100,26 @@ def solve_l0_binary(Q, gamma):
 
 
 def best_map(L1, L2):
-    """Permute labels of L2 match L1 as good as possible.
-
-    """
+    """Permute labels of L2 match L1 as good as possible."""
 
     if np.size(L1) != np.size(L2):
-        raise RuntimeError('Got sizes L1: {} and L2 {}, when should be equal'
-                           ''.format(np.size(L1), np.size(L2)))
+        raise RuntimeError(
+            "Got sizes L1: {} and L2 {}, when should be equal"
+            "".format(np.size(L1), np.size(L2))
+        )
 
-    Label1 = np.unique(L1); nClass1 = len(Label1)
-    Label2 = np.unique(L2); nClass2 = len(Label2)
+    Label1 = np.unique(L1)
+    nClass1 = len(Label1)
+    Label2 = np.unique(L2)
+    nClass2 = len(Label2)
 
-    nClass = max(nClass1,nClass2)
-    G = zeros(nClass)
+    nClass = max(nClass1, nClass2)
+    G = np.zeros(nClass)
     for i in range(nClass1):
         for j in range(nClass2):
             G[i, j] = len(np.where(L1 == Label1[i] and L2 == Label2[j]))
 
-    c, t = linear_sum_assignment(-1.0 * G);
+    c, t = scipy.optimize.linear_sum_assignment(-1.0 * G)
 
     newL2 = np.zeros(np.size(L2))
     for i in range(nClass2):
