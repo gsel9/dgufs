@@ -1,6 +1,6 @@
-# dgufs
+# Dependence Guided Unsupervised Feature Selection (DGUFS)
 
-DGUFS
+The Dependence Guided Unsupervised Feature Selection (DGUFS) method select features and partition data in a joint manner to enhance the interdependence among original data, cluster labels, and selected features [1]. 
 
 ## Installation
 
@@ -10,16 +10,28 @@ $ pip install dgufs
 
 ## Usage
 
-- TODO
+The DGUFS implementation conform to the `scikit-learn` API:
 
-## Contributing
+```python
+from dgufs.dgufs import DGUFS
+# third party
+from sklearn.datasets import load_iris
 
-Interested in contributing? Check out the contributing guidelines. Please note that this project is released with a Code of Conduct. By contributing to this project, you agree to abide by its terms.
+iris = load_iris(return_X_y=False)
+
+X, y = iris.data, iris.target
+
+# Select a subset of features 
+dgufs = DGUFS(num_features=2)
+X_sub = dgufs.fit_transform(X)
+```
 
 ## License
 
 `dgufs` was created by Severin Elvatun. It is licensed under the terms of the MIT license.
 
-## Credits
 
-`dgufs` was created with [`cookiecutter`](https://cookiecutter.readthedocs.io/en/latest/) and the `py-pkgs-cookiecutter` [template](https://github.com/py-pkgs/py-pkgs-cookiecutter).
+References
+----------
+
+* [1]: Guo, Jun, and Wenwu Zhu. "Dependence guided unsupervised feature selection." Proceedings of the AAAI conference on artificial intelligence. Vol. 32. No. 1. 2018.
