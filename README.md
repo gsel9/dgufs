@@ -1,6 +1,8 @@
 # Dependence Guided Unsupervised Feature Selection (DGUFS)
 
 ![GitHub CI](https://github.com/gsel9/dgufs/actions/workflows/ci.yml/badge.svg)
+![GitHub CI](https://readthedocs.org/projects/dgufs/badge/?version=latest)
+![GitHub CI](https://img.shields.io/badge/code%20style-black-000000.svg)
 
 The Dependence Guided Unsupervised Feature Selection (DGUFS) method select features and partition data in a joint manner to enhance the interdependence among original data, cluster labels, and selected features [1]. 
 
