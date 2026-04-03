@@ -3,27 +3,42 @@ The Dependence Guided Unsupervised Feature Selection algorithm by Jun Guo and
 Wenwu Zhu (2018).
 """
 # third party
+import warnings
+
 import numpy as np
 import pandas as pd
-from dgufs import utils
+from . import utils
 from scipy import linalg
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 
 class DGUFS(BaseEstimator, TransformerMixin):
     """The Dependence Guided Unsupervised Feature Selection (DGUFS) algorithm
     developed by Jun Guo and Wenwu Zhu.
 
-    num_features (int): The number of features to select.
-    num_clusters (int):
-    alpha (): Regularization parameter from the range ().
-    beta (): Regularization parameter > 0.
-    tol (float): Tolerance used to determine optimization convergance. Defaults
-        to 10e-6 as suggested in the paper.
-    max_iter (): The maximum number of iterations of the
-    mu ():
-    max_mu ():
-    rho ():
+    Parameters
+    ----------
+    num_features : int, default=2
+        The number of features to select.
+    num_clusters : int, default=2
+        The number of clusters (used for graph-rank constraint on L).
+    alpha : float, default=0.5
+        Regularization parameter controlling the rank of the graph matrix L.
+        Must be in (0, 1).
+    beta : float, default=0.9
+        Regularization parameter weighting the similarity term. Must be > 0.
+    tol : float, default=1e-6
+        Convergence tolerance. Optimization stops when both constraint
+        violations fall below this threshold.
+    max_iter : int, default=100
+        Maximum number of ADMM iterations before stopping.
+    mu : float, default=1e-6
+        Initial penalty parameter for the augmented Lagrangian.
+    max_mu : float, default=1e10
+        Upper bound on the penalty parameter ``mu``.
+    rho : float, default=1.1
+        Multiplicative factor by which ``mu`` is increased each iteration.
     """
 
     NAME = "DGUFSSelection"
@@ -35,7 +50,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         alpha=0.5,
         beta=0.9,
         tol=1e-6,
-        max_iter=1e2,
+        max_iter=100,
         mu=1e-6,
         max_mu=1e10,
         rho=1.1,
@@ -99,7 +114,9 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         # Select features based on where the transformed feature matrix has
         # column sums != 0.
-        selected_cols = np.squeeze(np.where(np.sum(self.Y.T, axis=0) != 0))
+        selected_cols = np.atleast_1d(
+            np.squeeze(np.where(np.sum(self.Y.T, axis=0) != 0))
+        )
         # Sanity check.
         assert len(selected_cols) <= self.num_features
 
@@ -107,15 +124,20 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
     @property
     def memberships(self):
-        """Return the cluster indicator labels for each obeservation."""
+        """Return the cluster indicator labels for each observation."""
+
+        check_is_fitted(self, attributes=["L", "Y", "Z", "M"])
 
         # NOTE: Alternatively use scipy.sparse.linalg.eigs with
         # k=self.num_clusters.
-        eigD, eigV = linalg.eig(np.maximum(self.L, np.transpose(self.L)))
-        # Discard imaginary parts and truncate assuming comps are sorted.
-        eigD = np.real(np.diag(eigD)[: self.num_clusters, : self.num_clusters])
-        eigV = np.real(eigV[:, : self.num_clusters])
-        self.V = np.dot(eigV, np.sqrt(eigD))
+        # eigh is faster and more numerically stable for symmetric matrices.
+        eigD, eigV = linalg.eigh(np.maximum(self.L, np.transpose(self.L)))
+        # eigh returns eigenvalues in ascending order; reverse to get largest first.
+        eigD = eigD[::-1][: self.num_clusters]
+        eigV = eigV[:, ::-1][:, : self.num_clusters]
+        eigD_diag = np.diag(np.real(eigD))
+        # Clip to avoid sqrt of negative values from floating-point noise.
+        self.V = np.dot(np.real(eigV), np.sqrt(np.maximum(eigD_diag, 0)))
         # The final cluster labels can be obtained by determining the position
         # of the largest element at each cluster indicator in V.
         return np.argmax(self.V, axis=1)
@@ -123,10 +145,15 @@ class DGUFS(BaseEstimator, TransformerMixin):
     def fit(self, X, **kwargs):
         """Select features from X.
 
-        Args:
-            X (array-like): The feature matrix with shape
-                (n samples x n features).
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The feature matrix.
 
+        Returns
+        -------
+        self : DGUFS
+            Fitted estimator.
         """
         X_trans, nrows, ncols = self._check_X(X)
 
@@ -136,8 +163,8 @@ class DGUFS(BaseEstimator, TransformerMixin):
 
         self._setup_matrices(nrows, ncols)
 
-        i = 1
-        while i <= self.max_iter:
+        converged = False
+        for i in range(1, int(self.max_iter) + 1):
             # Alternate optimization of matrices.
             self._update_Z(X_trans, ncols)
             self._update_Y()
@@ -150,19 +177,33 @@ class DGUFS(BaseEstimator, TransformerMixin):
             stopC1 = np.max(np.abs(leq1))
             stopC2 = np.max(np.abs(leq2))
             if (stopC1 < self.tol) and (stopC2 < self.tol):
-                i = self.max_iter
-            else:
-                # Update Lagrange multipliers.
-                self.Lamda1 = self.Lamda1 + self.mu * leq1
-                self.Lamda2 = self.Lamda2 + self.mu * leq2
-                self.mu = min(self.max_mu, self.mu * self.rho)
-                # Update counter.
-                i = i + 1
+                converged = True
+                break
+            # Update Lagrange multipliers.
+            self.Lamda1 = self.Lamda1 + self.mu * leq1
+            self.Lamda2 = self.Lamda2 + self.mu * leq2
+            self.mu = min(self.max_mu, self.mu * self.rho)
+
+        if not converged:
+            warnings.warn(
+                "DGUFS did not converge within {} iterations. "
+                "Consider increasing max_iter or relaxing tol.".format(self.max_iter),
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
         return self
 
     def _update_Z(self, X, ncols):
-        # Updates the Z matrix.
+        """Update the auxiliary variable Z via l_{2,0} projection.
+
+        Parameters
+        ----------
+        X : ndarray of shape (n_features, n_samples)
+            Transposed feature matrix.
+        ncols : int
+            Total number of features (used to compute the complement count).
+        """
         YHLH = self.Y.dot(self.H).dot(self.L).dot(self.H)
         U = X - self.Y - (((1 - self.beta) * YHLH - self.Lamda1) / self.mu)
         self.Z = X - utils.solve_l20(U, (ncols - self.num_features))
@@ -170,7 +211,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def _update_Y(self):
-        # Updates the Y matrix.
+        """Update the feature selection matrix Y via l_{2,0} projection."""
         ZHLH = self.Z.dot(self.H).dot(self.L).dot(self.H)
         U = self.Z + (((1 - self.beta) * ZHLH + self.Lamda1) / self.mu)
         self.Y = utils.solve_l20(U, self.num_features)
@@ -178,7 +219,7 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def _update_L(self):
-        # Updates the L matrix.
+        """Update the graph matrix L via rank-constrained Lagrangian step."""
         speed_up = utils.speed_up(
             self.H.dot(np.transpose(self.Y)).dot(self.Z).dot(self.H)
         )
@@ -189,7 +230,15 @@ class DGUFS(BaseEstimator, TransformerMixin):
         return self
 
     def _update_M(self, nrows, gamma=5e-3):
-        # Updates the M matrix.
+        """Update the binary adjacency matrix M via l0-binary projection.
+
+        Parameters
+        ----------
+        nrows : int
+            Number of samples (sets the identity diagonal block size).
+        gamma : float, default=5e-3
+            Sparsity regularization parameter.
+        """
         _M = self.L + self.Lamda2 / self.mu
         _M = utils.solve_l0_binary(_M, 2 * gamma / self.mu)
 
@@ -200,15 +249,24 @@ class DGUFS(BaseEstimator, TransformerMixin):
     def transform(self, X, **kwargs):
         """Retain selected features from X.
 
-        Args:
-            X (array-like): The feature matrix with shape
-                (n samples x n features).
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The feature matrix.
 
-        Returns:
-            (array-like): The feature matrix containing only the selected
-                features.
+        Returns
+        -------
+        output : array-like of shape (n_samples, num_features)
+            The feature matrix containing only the selected features.
 
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If called before ``fit``.
+        TypeError
+            If ``X`` is neither a numpy array nor a pandas DataFrame.
         """
+        check_is_fitted(self, attributes=["Y"])
 
         if isinstance(X, pd.DataFrame):
             data = X.values

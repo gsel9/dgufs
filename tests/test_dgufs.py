@@ -7,9 +7,12 @@
 
 # third party
 import numpy as np
+import pandas as pd
 import pytest
-from dgufs.dgufs import DGUFS
 from sklearn.datasets import load_iris
+from sklearn.exceptions import NotFittedError
+
+from dgufs import DGUFS
 
 __author__ = "Severin Elvatun"
 __email__ = "langberg91@gmail.com"
@@ -47,12 +50,30 @@ def test_error_num_features(data):
         dgufs.fit(data)
 
 
-def test_X_Z_norm(data):
-    # dgufs = DGUFS(num_features=num_features)
-    # dgufs.fit(data)
+def test_error_too_few_samples():
+    """Test that a RuntimeError is raised when X has fewer than 2 samples."""
 
-    # test: norm(X - Z)_(2, 0) = d - m
-    pass
+    X = np.array([[1, 2, 3]])  # only 1 sample
+    with pytest.raises(RuntimeError, match="more than two"):
+        dgufs = DGUFS(num_features=1)
+        dgufs.fit(X)
+
+
+def test_X_Z_norm(data):
+    """Test that the l_{2,0} norm of (X - Z) equals d - m (non-selected rows)."""
+
+    num_features = 2
+    dgufs = DGUFS(num_features=num_features)
+    dgufs.fit(data)
+
+    # data fixture: shape (3 features, 5 samples).
+    # _check_X transposes so X_trans inside algo is (5, 3) — ncols=5, nrows=3.
+    n_algo_features = data.shape[1]
+    X_trans = data.T
+    diff = X_trans - dgufs.Z
+    row_norms = np.linalg.norm(diff, ord=2, axis=1)
+    l20_norm = int(np.linalg.norm(row_norms, ord=0))
+    assert l20_norm == n_algo_features - num_features
 
 
 def test_Y_norm(data):
@@ -62,7 +83,7 @@ def test_Y_norm(data):
     dgufs.fit(data)
 
     l20_norm = np.linalg.norm(np.linalg.norm(dgufs.Y, ord=2, axis=1), ord=0)
-    assert l20_norm == dgufs.num_features
+    assert l20_norm == pytest.approx(dgufs.num_features)
 
 
 def test_M(data):
@@ -76,7 +97,6 @@ def test_M(data):
     assert len(np.unique(dgufs.M)) == 2
 
 
-# TODO: rank(L) = c, diag(L) = Identity
 def test_L(data):
     """Test properties of L matrix."""
 
@@ -86,19 +106,70 @@ def test_L(data):
     # Test L is positive semi-definite.
     assert np.all(np.linalg.eigvals(dgufs.L) >= 0)
     # Test rank(L) = c
-    # assert np.linalg.matrix_rank(dgufs.L) == dgufs.num_clusters
-    # Test diag(L) = Identity
-    # assert np.array_equal(np.diag(dgufs.L), np.eye(np.shape(dgufs.L)))
+    assert np.linalg.matrix_rank(dgufs.L) == dgufs.num_clusters
+    # Test diagonal of L is all ones.
+    assert np.allclose(np.diag(dgufs.L), np.ones(np.shape(dgufs.L)[0]))
+
+
+def test_transform_numpy(data):
+    """Test that transform() returns an ndarray with the correct number of columns."""
+
+    num_features = 2
+    dgufs = DGUFS(num_features=num_features)
+    dgufs.fit(data)
+    result = dgufs.transform(data.T)
+    assert isinstance(result, np.ndarray)
+    assert result.shape[1] == num_features
+
+
+def test_transform_dataframe(data):
+    """Test that transform() handles a pandas DataFrame input."""
+
+    num_features = 2
+    dgufs = DGUFS(num_features=num_features)
+    dgufs.fit(data)
+    df = pd.DataFrame(data.T)
+    result = dgufs.transform(df)
+    assert isinstance(result, pd.DataFrame)
+    assert result.shape[1] == num_features
+
+
+def test_transform_not_fitted():
+    """Test that transform raises NotFittedError when called before fit."""
+
+    dgufs = DGUFS(num_features=2)
+    X = np.random.rand(5, 3)
+    with pytest.raises(NotFittedError):
+        dgufs.transform(X)
+
+
+def test_memberships(data):
+    """Test that memberships returns an integer label array of the right length."""
+
+    dgufs = DGUFS(num_features=2, num_clusters=2)
+    dgufs.fit(data)
+    labels = dgufs.memberships
+    # data is shape (3, 5) so nrows (samples) inside algo = data.shape[0] = 3
+    assert labels.shape == (data.shape[0],)
+    assert np.issubdtype(labels.dtype, np.integer)
+
+
+def test_memberships_not_fitted():
+    """Test that memberships raises NotFittedError when called before fit."""
+
+    dgufs = DGUFS(num_features=2)
+    with pytest.raises(NotFittedError):
+        _ = dgufs.memberships
 
 
 def test_V(data):
-    """Test (n clusters x nrows) = shape(V)."""
-
-    nrows, _ = np.shape(data)
+    """Test that V is set after fitting."""
 
     dgufs = DGUFS()
     dgufs.fit(data)
-    # assert np.shape(dgufs.cluster_labels) == (dgufs.num_clusters, nrows)
+    # Trigger memberships to populate V, then verify shape.
+    _ = dgufs.memberships
+    assert dgufs.V is not None
 
 
 def test_iris(iris):

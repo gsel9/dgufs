@@ -1,10 +1,10 @@
-# NAme of the GitHub Actions workflow 
+# NAme of the GitHub Actions workflow
 name: CI
 
-# Controls when the workflow will run   
+# Controls when the workflow will run
 on: [push, pull_request]
-  # Trigger the workflow only for push or PR to main 
-  # branch 
+  # Trigger the workflow only for push or PR to main
+  # branch
   #push:
   #  branches: [ main ]
   #pull_request:
@@ -17,7 +17,7 @@ jobs:
 
     # Define job steps
     steps:
-    - name: Set up Python 
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.x"
@@ -26,28 +26,28 @@ jobs:
     - name: Check-out repository
       uses: actions/checkout@v4
 
-    - name: Install dependencies 
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
         pip install -r REQUIREMENTS.txt
         pip install -e .
 
+    - name: Lint with Ruff
+      run: |
+        pip install ruff
+        ruff --output-format=github .
+      continue-on-error: true
+
     - name: Test with pytest
       run: |
         pip install .[testing]
         pip freeze
-        pytest 
+        pytest --cov-report xml
 
-    #- name: Lint with Ruff
-    #  run: |
-    #    pip install ruff
-    #    ruff --output-format=github .
-    #  continue-on-error: true
-
-    #- name: Use Codecov to track coverage
-    #  uses: codecov/codecov-action@v2
-    #  with:
-    #    files: ./coverage.xml   # coverage report
+    - name: Use Codecov to track coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml   # coverage report
 
     #- name: Build documentation
     #  run: make html --directory docs/

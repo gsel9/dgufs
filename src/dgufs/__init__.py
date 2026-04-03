@@ -1,1 +1,3 @@
-# from .dgufs import DGUFS
+from .dgufs import DGUFS
+
+__all__ = ["DGUFS"]

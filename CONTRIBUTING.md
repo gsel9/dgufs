@@ -10,8 +10,9 @@ helps, and credit will always be given.
 If you are reporting a bug, please include:
 
 * Your operating system name and version.
-* Any details about your local setup that might be helpful in troubleshooting.
-* Detailed steps to reproduce the bug.
+* Your Python version (`python --version`) and package versions (`pip freeze`).
+* A minimal, reproducible example that triggers the issue.
+* The full traceback if applicable.
 
 ### Fix Bugs
 
@@ -38,34 +39,62 @@ If you are proposing a feature:
 * Remember that this is a volunteer-driven project, and that contributions
   are welcome :)
 
-## Get Started!
+## Get Started
 
 Ready to contribute? Here's how to set up `dgufs` for local development.
 
-1. Download a copy of `dgufs` locally.
-2. Install `dgufs` using `poetry`:
+1. Fork and clone the repository:
 
-    ```console
-    $ poetry install
+    ```bash
+    git clone https://github.com/gsel9/dgufs.git
+    cd dgufs
     ```
 
-3. Use `git` (or similar) to create a branch for local development and make your changes:
+2. Install in editable mode with the testing extras:
 
-    ```console
-    $ git checkout -b name-of-your-bugfix-or-feature
+    ```bash
+    pip install -e ".[testing]"
     ```
 
-4. When you're done making changes, check that your changes conform to any code formatting requirements and pass any tests.
+3. Create a branch for your changes:
 
-5. Commit your changes and open a pull request.
+    ```bash
+    git checkout -b name-of-your-bugfix-or-feature
+    ```
+
+4. Make your changes. Run the test suite to check nothing is broken:
+
+    ```bash
+    pytest
+    ```
+
+5. Commit your changes and open a pull request against `master`.
+
+## Code Style
+
+This project uses [Black](https://black.readthedocs.io) for formatting and
+[Ruff](https://docs.astral.sh/ruff/) for linting. Before opening a PR, run:
+
+```bash
+pip install black ruff
+black src/ tests/
+ruff src/ tests/
+```
+
+Pre-commit hooks are also available:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
 
 ## Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
 
-1. The pull request should include additional tests if appropriate.
-2. If the pull request adds functionality, the docs should be updated.
-3. The pull request should work for all currently supported operating systems and versions of Python.
+1. New or changed behaviour must be covered by tests under `tests/`.
+2. If the pull request adds functionality, update the docstrings and README accordingly.
+3. The CI pipeline must pass (tests + linting).
 
 ## Code of Conduct
 
