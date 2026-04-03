@@ -65,16 +65,6 @@ class DGUFS(BaseEstimator, TransformerMixin):
         self.max_mu = max_mu
         self.rho = rho
 
-        # NOTE: Attributes set with instance.
-        self.S = None
-        self.H = None
-        self.Y = None
-        self.Z = None
-        self.M = None
-        self.L = None
-        self.V = None
-        self.Lamda1 = None
-        self.Lamda2 = None
 
     def _setup_matrices(self, nrows, ncols):
         # Setup.
